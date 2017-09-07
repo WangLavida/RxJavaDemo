@@ -8,6 +8,9 @@ import android.widget.Button;
 
 import com.jakewharton.retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -20,16 +23,12 @@ import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableEmitter;
 import io.reactivex.FlowableOnSubscribe;
-import io.reactivex.FlowableSubscriber;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
-import io.reactivex.ObservableSource;
 import io.reactivex.Observer;
-import io.reactivex.Scheduler;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.annotations.NonNull;
-import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Consumer;
@@ -42,6 +41,8 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
 
+    @BindView(R.id.eventBus)
+    Button eventBus;
     private String TAG = "MainActivity";
 
     @Override
@@ -51,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
         ButterKnife.bind(this);
     }
 
-    @OnClick({R.id.subscribe, R.id.consumer, R.id.disposable, R.id.thread, R.id.map, R.id.zip, R.id.filter, R.id.flowable})
+    @OnClick({R.id.subscribe, R.id.consumer, R.id.disposable, R.id.thread, R.id.map, R.id.zip, R.id.filter, R.id.flowable, R.id.eventBus})
     public void onViewClicked(View view) {
         switch (view.getId()) {
             case R.id.subscribe:
@@ -85,6 +86,10 @@ public class MainActivity extends AppCompatActivity {
             case R.id.flowable:
                 TAG = "flowableTest";
                 flowableTest();
+                break;
+            case R.id.eventBus:
+                TAG = "eventBusTest";
+                eventBusTest();
                 break;
         }
     }
@@ -342,6 +347,14 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void eventBusTest() {
+        MessageEvent messageEvent = new MessageEvent("收到啦");
+        EventBus.getDefault().post(messageEvent);
+    }
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void getMsg(MessageEvent messageEvent){
+        eventBus.setText(messageEvent.msg);
+    }
     private void MyLog(String msg) {
         Log.i(TAG, msg);
     }
@@ -353,5 +366,15 @@ public class MainActivity extends AppCompatActivity {
         return new Retrofit.Builder().baseUrl("http://apicloud.mob.com/v1/weather/").client(builder.build()).addConverterFactory(GsonConverterFactory.create()).addCallAdapterFactory(RxJava2CallAdapterFactory.create()).build();
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        EventBus.getDefault().register(this);
+    }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        EventBus.getDefault().unregister(this);
+    }
 }
